@@ -3,26 +3,81 @@ package com.example.authenticaition
 import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Build
-import android.os.Bundle
+
 import android.provider.Settings
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-
+import android.content.DialogInterface
+import android.os.Bundle
+import android.util.Log
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import java.util.concurrent.Executor
 
 class MainActivity : AppCompatActivity() {
     private val LOCK_REQUEST_CODE = 221
     private val SECURITY_SETTING_REQUEST_CODE = 233
     private var textView: TextView? = null
 
+    private lateinit var biometricPrompt: BiometricPrompt
+    private lateinit var promptInfo: BiometricPrompt.PromptInfo
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         textView =  findViewById(R.id.texview);
-        authenticateApp()
+//        authenticateApp()
+        intiAuth()
     }
 
+    private fun intiAuth() {
+        // Create an Executor for main thread
+        val executor: Executor = ContextCompat.getMainExecutor(this)
+
+        // Create an instance of BiometricPrompt
+        biometricPrompt = BiometricPrompt(this, executor, authenticationCallback)
+
+        // Create the BiometricPrompt.PromptInfo
+        promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Biometric Authentication")
+            .setSubtitle("Please authenticate using your biometric credentials")
+            .setDescription("Touch the fingerprint sensor to authenticate")
+            .setNegativeButtonText("Cancel")
+            .build()
+
+        // Trigger biometric authentication
+        showBiometricPrompt()
+    }
+
+    private fun showBiometricPrompt() {
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    private val authenticationCallback = object : BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+            super.onAuthenticationError(errorCode, errString)
+            // Handle authentication error
+            textView!!.text = resources.getString(R.string.unlock_failed)
+            Log.e("TAG", "onAuthenticationError: error", )
+        }
+
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            super.onAuthenticationSucceeded(result)
+            // Handle authentication success
+            textView!!.text = resources.getString(R.string.unlock_success)
+            Log.e("TAG", "onAuthenticationSucceeded: success", )
+        }
+
+        override fun onAuthenticationFailed() {
+            super.onAuthenticationFailed()
+            // Handle authentication failure
+            textView!!.text = resources.getString(R.string.unlock_failed)
+            Log.e("TAG", "onAuthenticationFailed: failed", )
+        }
+    }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
