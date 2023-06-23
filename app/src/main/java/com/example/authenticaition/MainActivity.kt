@@ -1,5 +1,6 @@
 package com.example.authenticaition
 
+import android.app.AlertDialog
 import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Build
@@ -11,9 +12,14 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import android.content.DialogInterface
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
+import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import com.example.authenticaition.util.AuthenticationUtil
 import java.util.concurrent.Executor
 
 class MainActivity : AppCompatActivity() {
@@ -24,13 +30,27 @@ class MainActivity : AppCompatActivity() {
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
 
+    private lateinit var inactivityLock: AppLockManager
+    private lateinit var authenticationUtil: AuthenticationUtil
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         textView =  findViewById(R.id.texview);
+        inactivityLock = AppLockManager(this)
+
 //        authenticateApp()
         intiAuth()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        inactivityLock.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        inactivityLock.onPause()
     }
 
     private fun intiAuth() {
@@ -80,6 +100,7 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
         when (requestCode) {
             LOCK_REQUEST_CODE -> if (resultCode === RESULT_OK) {
                 //If screen lock authentication is success update text
