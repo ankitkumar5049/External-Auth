@@ -54,16 +54,24 @@ class AppLockManager(private val activity: Activity) {
 
     private fun showLockDialog() {
 
-        val dialogBuilder = AlertDialog.Builder(activity)
-        dialogBuilder.setMessage("App locked due to inactivity.")
-            .setPositiveButton("Unlock") { dialog: DialogInterface, _: Int ->
-                dialog.dismiss()
-                locked = false
-                resetInactivityTimer()
-            }
-            .setCancelable(false)
-        val lockDialog = dialogBuilder.create()
-        lockDialog.show()
+//        if (activity is BaseActivity) {
+//            (activity as BaseActivity).authenticateApp()
+//        }
+        resetInactivityTimer()
+
+//        val dialogBuilder = AlertDialog.Builder(activity)
+//        dialogBuilder.setMessage("App locked due to inactivity.")
+//            .setPositiveButton("Unlock") { dialog: DialogInterface, _: Int ->
+//                dialog.dismiss()
+//                locked = false
+//                if (activity is BaseActivity) {
+//                    (activity as BaseActivity).authenticateApp()
+//                }
+//                resetInactivityTimer()
+//            }
+//            .setCancelable(false)
+//        val lockDialog = dialogBuilder.create()
+//        lockDialog.show()
     }
 
     fun onResume() {

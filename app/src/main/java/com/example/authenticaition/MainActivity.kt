@@ -1,6 +1,8 @@
 package com.example.authenticaition
 
+import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.TextView
 import androidx.biometric.BiometricPrompt
 import com.example.authenticaition.util.AuthenticationUtil
@@ -26,14 +28,9 @@ class MainActivity : BaseActivity() {
 
     }
 
-    override fun onResume() {
-        super.onResume()
-        inactivityLock.onResume()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        inactivityLock.onPause()
+    fun authenticateAgain(view: View) {
+        val intent = Intent(this, MainActivity2::class.java)
+        startActivity(intent)
     }
 
 
