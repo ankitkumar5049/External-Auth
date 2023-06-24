@@ -1,57 +1,43 @@
 package com.example.authenticaition
 
 
-import android.app.Activity
-import android.app.ActivityManager
-import android.app.AlertDialog
-import android.app.Dialog
 import android.app.KeyguardManager
-import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.MutableLiveData
-import com.example.authenticaition.util.AuthenticationUtil.Companion.LOCK_REQUEST_CODE
-import com.example.authenticaition.util.AuthenticationUtil.Companion.SECURITY_SETTING_REQUEST_CODE
 import com.google.android.material.snackbar.Snackbar
 
 
-open class BaseActivity: AppCompatActivity() {
+open class BaseActivity : AppCompatActivity() {
 
-    private var locked = false
-    private lateinit var dialog: Dialog
-
-
-    private val LOCK_REQUEST_CODE = 101
-    private val SECURITY_SETTING_REQUEST_CODE = 102
+    companion object {
+        private const val LOCK_REQUEST_CODE = 1
+        private const val SECURITY_SETTING_REQUEST_CODE = 2
+    }
 
     private val lockDelayMillis: Long = 1 * 5 * 1000 // 2 minutes in milliseconds
 
     private var lastInteractionTime: Long = 0
+    var isAppLocked: Boolean = true
     private val lockHandler = Handler(Looper.getMainLooper())
-    private val lockRunnable = Runnable { lockApp() }
-    private var isInBackground: Boolean = true
-
+    private val lockRunnable = Runnable {
+        if (!isAppLocked) {
+            lockApp()
+        }
+    }
+    private var isInBackground: Boolean = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-//            setupTouchListeners()
 
         // Set up user interaction listener
         setInteractionListener()
@@ -59,6 +45,14 @@ open class BaseActivity: AppCompatActivity() {
         // Start the lock timer when the app is launched
         startLockTimer()
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+    }
+
+    override fun onBackPressed() {
+        if (!isAppLocked) {
+            super.onBackPressed()
+        } else {
+            finishAffinity()
+        }
     }
 
 
@@ -83,11 +77,13 @@ open class BaseActivity: AppCompatActivity() {
         val rootView = findViewById<View>(android.R.id.content)
         rootView.setOnTouchListener { _, _ ->
             resetLockTimer()
+            showLog("screen touched")
             false
         }
     }
 
     private fun startLockTimer() {
+        showLog("start timer")
         lastInteractionTime = System.currentTimeMillis()
         lockHandler.postDelayed(lockRunnable, lockDelayMillis)
     }
@@ -99,12 +95,14 @@ open class BaseActivity: AppCompatActivity() {
     private fun resetLockTimer() {
         stopLockTimer()
 //        if (!isInBackground) {
-            startLockTimer()
+        startLockTimer()
 //        }
     }
 
     private fun lockApp() {
         if (isDeviceSecure()) {
+            isAppLocked = true
+            showLog("lock app")
             authenticateApp()
         } else {
             showToast(getString(R.string.security_device_cancelled))
@@ -116,7 +114,7 @@ open class BaseActivity: AppCompatActivity() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN && keyguardManager.isKeyguardSecure
     }
 
-     fun authenticateApp() {
+    private fun authenticateApp() {
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val i = keyguardManager.createConfirmDeviceCredentialIntent(
@@ -124,10 +122,17 @@ open class BaseActivity: AppCompatActivity() {
                 resources.getString(R.string.confirm_pattern)
             )
             try {
+                showLog("no exception")
                 startActivityForResult(i, LOCK_REQUEST_CODE)
             } catch (e: Exception) {
+
+                // If app is unable to find any Security settings, show a message to the user
+                showLog("exception")
+                // Lock the app immediately since screen lock is not available
+                lockApp()
                 val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
                 try {
+                    showLog("open setting")
                     startActivityForResult(intent, SECURITY_SETTING_REQUEST_CODE)
                 } catch (ex: Exception) {
                     showToast(getString(R.string.security_device_cancelled))
@@ -136,31 +141,66 @@ open class BaseActivity: AppCompatActivity() {
         }
     }
 
-    companion object {
-        private const val LOCK_REQUEST_CODE = 1
-        private const val SECURITY_SETTING_REQUEST_CODE = 2
+
+
+//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+//        super.onActivityResult(requestCode, resultCode, data)
+//
+//        when (requestCode) {
+//            LOCK_REQUEST_CODE -> if (resultCode === RESULT_OK) {
+//                //If screen lock authentication is success update text
+//                unlockApp()
+//                showLog("Auth success")
+//            } else {
+//                //If screen lock authentication is failed
+//                unlockApp()
+//                showLog("close activity")
+//                finishAffinity()
+//            }
+//
+//            SECURITY_SETTING_REQUEST_CODE ->
+//                //When user is enabled Security settings then we don't get any kind of RESULT_OK
+//                //So we need to check whether device has enabled screen lock or not
+//                if (isDeviceSecure()) {
+//                    showLog("device secure")
+//                    //If screen lock enabled show toast and start intent to authenticate user
+//                    if (!isAppLocked) {
+//                        authenticateApp()
+//                    }
+//                    unlockApp()
+//                    showToast(getString(R.string.device_is_secure))
+//                } else {
+//                    showLog("not secured")
+//                    //If screen lock is not enabled just update text
+//                    showToast(getString(R.string.security_device_cancelled))
+//                    lockApp()
+//                }
+//        }
+//    }
+
+    private fun unlockApp() {
+        isAppLocked = false
     }
 
-    fun showToast(message:String){
-        Toast.makeText(this,message,Toast.LENGTH_SHORT).show()
-
-
+    fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
-    fun showSnackbar(view: View,message: String){
+
+    fun showSnackbar(view: View, message: String) {
 //        Toast.makeText(this,message,Toast.LENGTH_SHORT).show()
 
-        Snackbar.make(this,view,message,Snackbar.LENGTH_SHORT).show()
+        Snackbar.make(this, view, message, Snackbar.LENGTH_SHORT).show()
     }
 
 
-
-    fun showLog(message:String){
+    fun showLog(message: String) {
         Log.i("ankit", "showLog: $message")
     }
 
 
-    fun showDebugLog(tag: String, message: String){
-        Log.d(tag,"customLog: $message")
+    fun showDebugLog(tag: String, message: String) {
+        Log.d(tag, "customLog: $message")
     }
+
 
 }
