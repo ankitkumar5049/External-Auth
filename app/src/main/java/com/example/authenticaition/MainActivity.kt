@@ -15,11 +15,8 @@ class MainActivity : BaseActivity() {
     private val SECURITY_SETTING_REQUEST_CODE = 233
     private var textView: TextView? = null
 
-    private lateinit var biometricPrompt: BiometricPrompt
-    private lateinit var promptInfo: BiometricPrompt.PromptInfo
 
     private lateinit var inactivityLock: AppLockManager
-    private lateinit var authenticationUtil: AuthenticationUtil
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +24,7 @@ class MainActivity : BaseActivity() {
         textView =  findViewById(R.id.texview);
         inactivityLock = AppLockManager(this)
 
-        authenticateApp()
+//        authenticateApp()
 
     }
 

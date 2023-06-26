@@ -3,6 +3,7 @@ package com.example.authenticaition
 
 import android.app.KeyguardManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -13,6 +14,9 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.example.authenticaition.util.DeviceUtils
 import com.google.android.material.snackbar.Snackbar
 
 
@@ -21,6 +25,7 @@ open class BaseActivity : AppCompatActivity() {
     companion object {
         private const val LOCK_REQUEST_CODE = 1
         private const val SECURITY_SETTING_REQUEST_CODE = 2
+        private val REQUEST_READ_PHONE_STATE = 101
     }
 
     private val lockDelayMillis: Long = 1 * 5 * 1000 // 2 minutes in milliseconds
@@ -39,12 +44,45 @@ open class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set up user interaction listener
-        setInteractionListener()
+        checkDeviceAuthenticity()
 
-        // Start the lock timer when the app is launched
-        startLockTimer()
+
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+    }
+
+    private fun checkDeviceAuthenticity() {
+        if (DeviceUtils.isGenuineDevice()) {
+            // Device is genuine, continue with app logic
+            Toast.makeText(this, "Device is genuine", Toast.LENGTH_SHORT).show()
+            showLog("genuine device")
+            // Set up user interaction listener
+            authenticateApp()
+            setInteractionListener()
+
+            // Start the lock timer when the app is launched
+            startLockTimer()
+        } else {
+            // Device is not genuine, show error message or exit the app
+            Toast.makeText(this, "This app is not supported on emulators or non-genuine devices", Toast.LENGTH_LONG).show()
+            finish()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_READ_PHONE_STATE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                checkDeviceAuthenticity()
+            } else {
+                // Permission denied, handle accordingly
+                Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
     }
 
     override fun onBackPressed() {
