@@ -17,10 +17,44 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions "deafult","api"
+
+
+    productFlavors{
+        free{
+            dimension "deafult"
+            applicationIdSuffix ".free"
+            versionNameSuffix "-free"
+        }
+        paid{
+            dimension "deafult"
+            applicationIdSuffix ".paid"
+            versionNameSuffix "-paid"
+        }
+        api31{
+            minSdk 31
+            dimension "api"
+            applicationIdSuffix ".api31"
+            versionNameSuffix "-api31"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
+            debuggable false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String","BASE_URL","\"https://www.example_prod.com\""
+        }
+        dev{
+            minifyEnabled false
+            debuggable true
+            buildConfigField "String","BASE_URL","\"https://www.example_dev.com\""
+        }
+        local{
+            minifyEnabled false
+            debuggable true
+            buildConfigField "String","BASE_URL","\"https://www.example_local.com\""
         }
     }
     compileOptions {
@@ -43,4 +77,11 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
     implementation "androidx.biometric:biometric-ktx:1.2.0-alpha05"
+}
+
+task copyApk(type: Copy){
+    var sourceDir = layout.buildDirectory.dir("intermediates/apk/app-debug.apk")
+    var destDir = "$rootDir/apk"
+    from(sourceDir)
+    into(destDir)
 }
