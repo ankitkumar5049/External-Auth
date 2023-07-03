@@ -72,7 +72,6 @@ class DeviceUtils {
         fun isGenuineDevice(): Boolean {
             val model = Build.MODEL
             Log.e("ankit", "isGenuineDevice: ${model.toString()}", )
-//            return !isEmulator() && knownDeviceModels.contains(model)
             return !isEmulator()
         }
     }

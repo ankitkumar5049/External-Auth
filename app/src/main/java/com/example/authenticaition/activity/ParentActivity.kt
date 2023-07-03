@@ -1,10 +1,10 @@
-package com.example.authenticaition
-
+package com.example.authenticaition.activity
 
 import android.app.KeyguardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,15 +12,11 @@ import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import com.example.authenticaition.R
 import com.example.authenticaition.util.DeviceUtils
 import com.google.android.material.snackbar.Snackbar
 
-
-open class BaseActivity : AppCompatActivity() {
+open class ParentActivity : AppCompatActivity() {
 
     companion object {
         private const val LOCK_REQUEST_CODE = 1
@@ -28,36 +24,33 @@ open class BaseActivity : AppCompatActivity() {
         private val REQUEST_READ_PHONE_STATE = 101
     }
 
-    private val lockDelayMillis: Long = 1 * 5 * 1000 // 2 minutes in milliseconds
+    private val lockDelayMillis: Long = 3 * 60 * 1000 // 2 minutes in milliseconds
 
     private var lastInteractionTime: Long = 0
-    var isAppLocked: Boolean = true
+    var isAppLocked: Boolean = false
     private val lockHandler = Handler(Looper.getMainLooper())
     private val lockRunnable = Runnable {
         if (!isAppLocked) {
-            lockApp()
+//            lockApp()
         }
     }
     private var isInBackground: Boolean = false
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        checkDeviceAuthenticity()
+        showLog("Parent activity get called")
 
 
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
     }
 
-    private fun checkDeviceAuthenticity() {
+     fun checkDeviceAuthenticity() {
         if (DeviceUtils.isGenuineDevice()) {
             // Device is genuine, continue with app logic
             Toast.makeText(this, "Device is genuine", Toast.LENGTH_SHORT).show()
             showLog("genuine device")
             // Set up user interaction listener
             authenticateApp()
-            setInteractionListener()
 
             // Start the lock timer when the app is launched
             startLockTimer()
@@ -74,7 +67,7 @@ open class BaseActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_READ_PHONE_STATE) {
+        if (requestCode == ParentActivity.REQUEST_READ_PHONE_STATE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 checkDeviceAuthenticity()
             } else {
@@ -93,31 +86,10 @@ open class BaseActivity : AppCompatActivity() {
         }
     }
 
-
-    override fun onResume() {
-        super.onResume()
-        isInBackground = false
-        resetLockTimer()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        isInBackground = true
-        resetLockTimer()
-    }
-
     override fun onUserInteraction() {
         super.onUserInteraction()
+        showLog("user interaction called")
         resetLockTimer()
-    }
-
-    private fun setInteractionListener() {
-        val rootView = findViewById<View>(android.R.id.content)
-        rootView.setOnTouchListener { _, _ ->
-            resetLockTimer()
-            showLog("screen touched")
-            false
-        }
     }
 
     private fun startLockTimer() {
@@ -127,14 +99,15 @@ open class BaseActivity : AppCompatActivity() {
     }
 
     private fun stopLockTimer() {
+        showLog("stop the timer")
         lockHandler.removeCallbacks(lockRunnable)
     }
 
     private fun resetLockTimer() {
+        showLog("reset the timer")
         stopLockTimer()
-//        if (!isInBackground) {
         startLockTimer()
-//        }
+
     }
 
     private fun lockApp() {
@@ -147,12 +120,12 @@ open class BaseActivity : AppCompatActivity() {
         }
     }
 
-    private fun isDeviceSecure(): Boolean {
+    fun isDeviceSecure(): Boolean {
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN && keyguardManager.isKeyguardSecure
     }
 
-    private fun authenticateApp() {
+    fun authenticateApp() {
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val i = keyguardManager.createConfirmDeviceCredentialIntent(
@@ -161,7 +134,7 @@ open class BaseActivity : AppCompatActivity() {
             )
             try {
                 showLog("no exception")
-                startActivityForResult(i, LOCK_REQUEST_CODE)
+                startActivityForResult(i, ParentActivity.LOCK_REQUEST_CODE)
             } catch (e: Exception) {
 
                 // If app is unable to find any Security settings, show a message to the user
@@ -171,7 +144,7 @@ open class BaseActivity : AppCompatActivity() {
                 val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
                 try {
                     showLog("open setting")
-                    startActivityForResult(intent, SECURITY_SETTING_REQUEST_CODE)
+                    startActivityForResult(intent, ParentActivity.SECURITY_SETTING_REQUEST_CODE)
                 } catch (ex: Exception) {
                     showToast(getString(R.string.security_device_cancelled))
                 }
@@ -179,54 +152,11 @@ open class BaseActivity : AppCompatActivity() {
         }
     }
 
-
-
-//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-//
-//        when (requestCode) {
-//            LOCK_REQUEST_CODE -> if (resultCode === RESULT_OK) {
-//                //If screen lock authentication is success update text
-//                unlockApp()
-//                showLog("Auth success")
-//            } else {
-//                //If screen lock authentication is failed
-//                unlockApp()
-//                showLog("close activity")
-//                finishAffinity()
-//            }
-//
-//            SECURITY_SETTING_REQUEST_CODE ->
-//                //When user is enabled Security settings then we don't get any kind of RESULT_OK
-//                //So we need to check whether device has enabled screen lock or not
-//                if (isDeviceSecure()) {
-//                    showLog("device secure")
-//                    //If screen lock enabled show toast and start intent to authenticate user
-//                    if (!isAppLocked) {
-//                        authenticateApp()
-//                    }
-//                    unlockApp()
-//                    showToast(getString(R.string.device_is_secure))
-//                } else {
-//                    showLog("not secured")
-//                    //If screen lock is not enabled just update text
-//                    showToast(getString(R.string.security_device_cancelled))
-//                    lockApp()
-//                }
-//        }
-//    }
-
-    private fun unlockApp() {
-        isAppLocked = false
-    }
-
     fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
-    fun showSnackbar(view: View, message: String) {
-//        Toast.makeText(this,message,Toast.LENGTH_SHORT).show()
-
+    fun showSnackBar(view: View, message: String) {
         Snackbar.make(this, view, message, Snackbar.LENGTH_SHORT).show()
     }
 
@@ -240,5 +170,17 @@ open class BaseActivity : AppCompatActivity() {
         Log.d(tag, "customLog: $message")
     }
 
+    override fun onResume() {
+        super.onResume()
+        showLog("onResume called")
+        isInBackground = false
+        resetLockTimer()
+    }
 
+    override fun onPause() {
+        super.onPause()
+        showLog("onPause called")
+        isInBackground = true
+        resetLockTimer()
+    }
 }

@@ -1,13 +1,10 @@
-package com.example.authenticaition
+package com.example.authenticaition.util
 
 import android.app.Activity
-import android.app.AlertDialog
-import android.content.DialogInterface
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
-import com.example.authenticaition.util.AuthenticationUtil
 
 class AppLockManager(private val activity: Activity) {
 
